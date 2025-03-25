@@ -48,6 +48,7 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
+	implementation("com.google.code.gson:gson:2.8.8")
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.media3.common.ktx)
     implementation(libs.material3)

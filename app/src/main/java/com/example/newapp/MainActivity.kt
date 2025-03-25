@@ -8,31 +8,39 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.example.newapp.ui.theme.NewAppTheme
 import com.example.quizapp.QuizDatabaseHelper
 import androidx.compose.foundation.layout.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.annotation.OptIn
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.material.icons.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.media3.common.util.UnstableApi
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.IconButton
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.List
+import parseJsonToQuizList
+import readJsonFromUri
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.*
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.List
+import androidx.compose.ui.Alignment
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,6 +48,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val dbHelper = QuizDatabaseHelper(this)
+
+
 
         // Use lifecycleScope to run database query asynchronously
         dbHelper.deleteAllQuizQuestions()
@@ -57,17 +67,32 @@ class MainActivity : ComponentActivity() {
             var currentIndex by remember { mutableStateOf(0) }
             var showAnswer by remember { mutableStateOf(false) }
             var selectedFileUri by remember { mutableStateOf<Uri?>(null) }  // For storing the selected file URI
+            var reloadTrigger by remember { mutableStateOf(0) }  // Track reloads
+            var showQuestionsList by remember { mutableStateOf(false) }  // State to toggle question list visibility
 
 
             val openFileLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.OpenDocument(),
                 onResult = { uri: Uri? ->
                     selectedFileUri = uri
+                    val jsonString = readJsonFromUri(this, uri)
+
+                    if (jsonString != null) {
+                        val quizList = parseJsonToQuizList(jsonString)
+
+                        quizList.forEach {
+                            dbHelper.insertQuizQuestion(it.question, it.answer)
+                        }
+
+                        reloadTrigger += 1
+                    }
+
                 }
+
             )
 
             // Use lifecycleScope to run the database query asynchronously
-            LaunchedEffect(Unit) {
+            LaunchedEffect(reloadTrigger) {
                 quizQuestions = dbHelper.getAllQuizQuestions()
             }
 
@@ -87,9 +112,34 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     },
+
+
                     content = { innerPadding ->
+                        // TO FIX ABOVE!!!!!!
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(innerPadding),  // Apply innerPadding to Row
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            IconButton(
+                                onClick = {
+
+                                }
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.List,
+                                    contentDescription = "Show Questions List"
+                                )
+                            }
+                        }
+                        // TO DO ABOVE!!!!!!
+
                         Column(modifier = Modifier.padding(innerPadding)) {  // Apply innerPadding here
                             // Center the content vertically and horizontally
+
+
                             Box(
                                 modifier = Modifier
                                     .weight(1f) // Ensures the Box takes up remaining space
@@ -126,6 +176,7 @@ class MainActivity : ComponentActivity() {
 
                                     }
                                 }
+
                             }
 
                             // Add Spacer to ensure space between content and buttons
@@ -166,24 +217,18 @@ class MainActivity : ComponentActivity() {
                                     Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next")
                                 }
                             }
+
                         }
                         selectedFileUri?.let {
                             Text(text = "Selected file: $it")
                         }
 
                     }
-                    )
-                }
-
-
+                )
             }
+
+
         }
     }
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
 }
+
